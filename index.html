@@ -1,0 +1,267 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>A novel approach to XSLT-based Schematron validation</title>
+
+        <link rel="stylesheet" href="assets/reveal/css/reveal.css">
+        <link rel="stylesheet" href="assets/reveal/css/theme/white.css">
+        <link rel="stylesheet" href="assets/dmaus.css">
+        <link rel="stylesheet" href="assets/github.css">
+
+        <!-- Printing and PDF exports -->
+        <script>
+         var link = document.createElement( 'link' );
+         link.rel = 'stylesheet';
+         link.type = 'text/css';
+         link.href = window.location.search.match( /print-pdf/gi ) ? 'assets/reveal/css/print/pdf.css' : 'assets/reveal/css/print/paper.css';
+         document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>
+                    <h1>
+                        A novel approach to XSLT-based Schematron validation
+                    </h1>
+                    <address>
+                        <p>David Maus &lt;dmaus@dmaus.name&gt;</p>
+                        <p>XML Prague 2019</p>
+                    </address>
+                </section>
+                <section>
+                    <h2>Agenda</h2>
+                    <ul>
+                        <li>schematron in a nutshell</li>
+                        <li>
+                            XSLT-based schematron validation
+                            <ul>
+                                <li>the challenge</li>
+                                <li>three approaches</li>
+                                <li>simplifications</li>
+                            </ul>
+                        </li>
+                        <li>summary</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Schematron</h2>
+                    <ul>
+                        <li>a rule based validation language for XML documents</li>
+                        <li>focus on natural-language assertions</li>
+                        <li>validate arbitrary relationships in a document</li>
+                        <li>key concepts designed by Rick Jelliffe in 1999</li>
+                        <li>ISO-standardized in 2006, updated 2016</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Key concepts</h2>
+                    <dl>
+                        <dt>Pattern</dt>
+                        <dd>structure in a source document specified in a schema by an ordered collection of rules</dd>
+                        <dt>Rule</dt>
+                        <dd>selects portions of the source document that contribute to a pattern</dd>
+                        <dt>Assertion</dt>
+                        <dd>natural-language assertion with an assertion test expressed as a boolean query</dd>
+                    </dl>
+                </section>
+                <section>
+                    <h2>Example</h2>
+                    <pre><code>&lt;schema xmlns="http://purl.oclc.org/dsdl/schematron">
+  &lt;pattern id="agents">
+    &lt;rule context="tei:person">
+      &lt;assert test="tei:persName[@type = 'preferred']">
+        A person element must provide a persName element
+        with the preferred name.
+      &lt;/assert>
+      …
+    &lt;/rule>
+    …
+  &lt;/pattern>
+  …
+&lt;/schema></code></pre>
+                </section>
+                <section>
+                    <h2>XSLT-based Schematron</h2>
+                    <ul>
+
+                        <li>compile schema to stylesheet that creates a validation report</li>
+                        <li>most popular way to implement Schematron validation</li>
+                        <li>challenge lies in the construction of the validation stylesheet</li>
+                    </ul>
+                </section>
+                <section>
+                    <img src="assets/problemaufriss-1.svg">
+                </section>
+                <section>
+                    <img src="assets/problemaufriss-2.svg">
+                </section>
+                <section>
+                    <img src="assets/problemaufriss.svg">
+                </section>
+                <section class="problemaufriss">
+                    <ul>
+                        <li>Match rule R1 and R2<br><small>same node, different patterns</small></li>
+                        <li>Do not match rule R3<br><small>same node, same pattern</small></li>
+                    </ul>
+                </section>
+                <section class="problemaufriss-1">
+                    <h2>Match same node in different patterns</h2>
+                    <ul class="fragment">
+                        <li class="fragment shrink">xsl:apply-imports<br><small>not viable</small></li>
+                        <li class="fragment">different modes<br><small>one mode per pattern</small></li>
+                        <li class="fragment">xsl:next-match<br><small>XSLT 2.0</small></li>
+                    </ul>
+                </section>
+                <section class="problemaufriss-2">
+                    <h2>Do not match same node in same pattern</h2>
+                    <ul>
+                        <li class="fragment">
+                            override templates<br><small>only works for modes per pattern</small></li>
+                        <li class="fragment">
+                            match, but remove from final report<br><small>track matched (pattern, node)</small></li>
+                        <li class="fragment">
+                            match, but don't validate<br><small>pass a sequence of already matched (pattern, node)</small></li>
+                    </ul>
+                </section>
+                <!-- <section>
+                     <h2>traditional</h2>
+                     <pre><code>&lt;xsl:template match="*" mode="P1" priority="2">
+                     &lt;svrl:fired-rule id="R1" …/>
+                     …
+                     &lt;xsl:apply-templates/>
+                     &lt;/xsl:template>
+
+                     &lt;xsl:template match="*" mode="P2" priority="1">
+                     &lt;svrl:fired-rule id="R2" …/>
+                     …
+                     &lt;xsl:apply-templates/>
+                     &lt;/xsl:template>
+
+                     &lt;xsl:template match="*" mode="P2" priority="0">
+                     &lt;svrl:fired-rule id="R3" …/>
+                     …
+                     &lt;xsl:apply-templates/>
+                     &lt;/xsl:template></code></pre>
+                     </section>
+                     <section>
+                     <h2>ex-post rule match selection</h2>
+                     <pre><code>&lt;xsl:template match="*" mode="validate" priority="2">
+                     &lt;svrl:fired-rule id="R1" node="{generate-id()}" pattern="P1" …/>
+                     …
+                     &lt;xsl:next-match/>
+                     &lt;/xsl:template>
+
+                     &lt;xsl:template match="*" mode="validate" priority="1">
+                     &lt;svrl:fired-rule id="R2" node="{generate-id()}" pattern="P2" …/>
+                     …
+                     &lt;xsl:next-match/>
+                     &lt;/xsl:template>
+
+                     &lt;xsl:template match="*" mode="validate" priority="0">
+                     &lt;svrl:fired-rule id="R3" node="{generate-id()}" pattern="P2" …/>
+                     …
+                     &lt;xsl:next-match/>
+                     &lt;/xsl:template></code></pre>
+                     </section> -->
+                <section>
+                    <h2>match, don't validate</h2>
+                    <pre><code>&lt;xsl:template match="*" mode="validate" priority="2">
+  &lt;xsl:param name="pattern-node" as="element(rule)*"/>
+  &lt;xsl:if test="empty($pattern-node[@pattern = 'P1'][@node = generate-id(current())])">
+    &lt;svrl:fired-rule id="R1"/>
+    …
+  &lt;/xsl:if>
+  &lt;xsl:next-match>
+    &lt;xsl:with-param name="pattern-node" as="element(rule)*">
+      &lt;xsl:sequence select="$pattern-node"/>
+      &lt;rule node="{generate-id()}" pattern="P1"/>
+    &lt;/xsl:with-param>
+  &lt;/xsl:next-match>
+&lt;/xsl:template></code></pre>
+                </section>
+                <section>
+                    <table>
+                        <thead>
+                            <tr><th></th><th>same node, different patterns</th><th>same node, same pattern</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>traditional</td>
+                                <td>one mode per pattern</td>
+                                <td>override templates</td>
+                            </tr>
+                            <tr>
+                                <td>ex-post</td>
+                                <td>single mode<br><small>xsl:next-match</small></td>
+                                <td>match, validate, remove from report</td>
+                            </tr>
+                            <tr>
+                                <td>?</td>
+                                <td>single mode<br><small>xsl:next-match</small></td>
+                                <td>match, don't validate</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+                <section>
+                    <h2>Really just a single mode?</h2>
+                    <ul>
+                        <li>a pattern may specify variables that are used in its rules and assertions</li>
+                        <li>a pattern may apply to subordinate documents instead the primary document</li>
+                        <li>a pattern may be imported from an external definition with a different base URI</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Pattern groups</h2>
+                    <ul>
+                        <li>
+                            identify patterns whose rules can run in the same mode</li>
+                        <li>
+                            use a grouping function that concatenates
+                            <ol>
+                                <li>the base URI of a pattern</li>
+                                <li>the value of the @documents properties</li>
+                                <li>the generated id of the first variable binding element</li>
+                            </ol>
+                        </li>
+                        <li>
+                            create one mode per pattern group</li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Summary</h2>
+                    <ul>
+                        <li>XSLT is a natural fit to Schematron validation</li>
+                        <li>there are three approaches to XSLT-based Schematron validation<br><small>traditional, ex-post rule match selection, ?</small></li>
+                        <li>use of xsl:next-match is limited to XSLT 2 but can reduce the number of times a document is processed</li>
+                    </ul>
+                </section>
+                <section>
+                    <h1>
+                        SchXslt
+                        <br>
+                        <small>http://github.com/dmj/schxslt</small>
+                    </h1>
+                </section>
+            </div>
+        </div>
+
+        <script src="assets/reveal/lib/js/head.min.js"></script>
+        <script src="assets/reveal/js/reveal.js"></script>
+
+        <script>
+         Reveal.initialize(
+             {
+                 slideNumber: 'c/t',
+                 dependencies: [
+                     { src: 'assets/reveal/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                 ]
+             }
+         );
+        </script>
+    </body>
+</html>

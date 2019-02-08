@@ -1,0 +1,10 @@
+body { background-image: url(dmaus.svg); background-repeat: no-repeat; }
+.reveal address { margin-top: 10em; font-size: 0.6em; }
+.reveal h1 { font-size: 1.3em; }
+.reveal h2 { font-size: 1.0em; text-decoration: underline; }
+.reveal section img { border: none; }
+.reveal section.problemaufriss { background-image: url(problemaufriss-simple.svg); background-repeat: no-repeat; background-position: right bottom; }
+.reveal section.problemaufriss-1 { background-image: url(problemaufriss-simple-1.svg); background-repeat: no-repeat; background-position: right bottom; }
+.reveal section.problemaufriss-2 { background-image: url(problemaufriss-simple-2.svg); background-repeat: no-repeat; background-position: right bottom; }
+.reveal section pre code { max-height: 800px; }
+.reveal section pre { width: 100%; }
